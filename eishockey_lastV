@@ -1,0 +1,323 @@
+-- Studienfall 9: Eishockeyliga
+-- Erstellung der Tabelle Landesverband
+CREATE TABLE Landesverband
+(
+    LVID          SERIAL PRIMARY KEY,
+    Name          VARCHAR(255) NOT NULL,
+    Strasse       VARCHAR(255) NOT NULL,
+    Ort           VARCHAR(255) NOT NULL,
+    Plz           VARCHAR(255) NOT NULL,
+    Telefonnummer VARCHAR(255) NOT NULL
+);
+
+-- Erstellung der Tabelle Verein --Uniqueness
+CREATE TABLE Verein
+(
+    VID             SERIAL PRIMARY KEY,
+    Name            VARCHAR(255) NOT NULL UNIQUE,
+    Heimatstadt     VARCHAR(255) NOT NULL,
+    Gründungsjahr   INTEGER      NOT NULL,
+    Geschäftsführer VARCHAR(255) NOT NULL,
+    Strasse       VARCHAR(255) NOT NULL,
+    Ort           VARCHAR(255) NOT NULL,
+    Plz           VARCHAR(255) NOT NULL,
+    Landesverband   INTEGER REFERENCES Landesverband (LVID) ON DELETE CASCADE
+);
+
+-- Erstellung der Tabelle Spieler -- Default Werte
+CREATE TABLE Spieler
+(
+    SID                  SERIAL PRIMARY KEY,
+    Vorname              VARCHAR(255) NOT NULL,
+    Nachname             VARCHAR(255) NOT NULL,
+    Vereinszugehörigkeit INTEGER REFERENCES Verein (VID) ON UPDATE CASCADE ON DELETE CASCADE,
+    Nationalität         VARCHAR(255) NOT NULL DEFAULT 'Deutschland',
+    Trikotnummer         INTEGER      NOT NULL,
+    Position             VARCHAR(255) NOT NULL,
+    CHECK (Position IN ('Tor', 'Stürmer', 'Verteidiger'))
+);
+
+-- Erstellung der Tabelle Schiedsrichter
+CREATE TABLE Schiedsrichter
+(
+    SRID         SERIAL PRIMARY KEY,
+    Vorname      VARCHAR(255) NOT NULL,
+    Nachname     VARCHAR(255) NOT NULL,
+    Nationalität VARCHAR(255) NOT NULL,
+    Erfahrung    INTEGER      NOT NULL
+);
+
+-- Erstellung der Tabelle Saison
+CREATE TABLE Saison
+(
+    SID  SERIAL PRIMARY KEY UNIQUE,
+    Jahr INTEGER NOT NULL
+);
+
+-- Erstellung der Tabelle Spielplan
+CREATE TABLE Spielplan
+(
+    SpielID        SERIAL PRIMARY KEY,
+    SID            INTEGER REFERENCES Saison (SID) ON DELETE CASCADE,
+    Datum          DATE NOT NULL,
+    Uhrzeit        TIME NOT NULL,
+    Heimmannschaft INTEGER REFERENCES Verein (VID) ON DELETE CASCADE,
+    Gastmannschaft INTEGER REFERENCES Verein (VID) ON DELETE CASCADE
+);
+
+-- Erstellung der Tabelle Spieleraufstellung -- Referenzielle Integrität
+CREATE TABLE Spieleraufstellung
+(
+    SpielID INTEGER REFERENCES Spielplan (SpielID) ON DELETE CASCADE,
+    SID     INTEGER REFERENCES Spieler (SID) ON DELETE CASCADE,
+    SRID INTEGER REFERENCES Schiedsrichter(SRID) ON DELETE CASCADE,
+    PRIMARY KEY (SpielID, SID, SRID)
+);
+
+-- Erstellung der Tabelle Ergebnis -- Check Constraints
+CREATE TABLE Ergebnis
+(
+    SpielID     INTEGER REFERENCES Spielplan (SpielID) ON DELETE CASCADE,
+    Endresultat VARCHAR(255) NOT NULL,
+    CHECK (Endresultat IN ('Reguläre Spielzeit', 'Verlängerung', 'Penalty-Schießen')),
+    ToreHeim    INTEGER      NOT NULL,
+    ToreGast    INTEGER      NOT NULL,
+    CHECK (ToreHeim >= 0 AND ToreGast >= 0),
+    PRIMARY KEY (SpielID)
+);
+
+-- Erstellung der Tabelle Tore
+CREATE TABLE Tore
+(
+    TID         SERIAL PRIMARY KEY,
+    SpielID     INTEGER REFERENCES Spielplan (SpielID) ON DELETE CASCADE,
+    Zeitstempel TIMESTAMP NOT NULL,
+    Torschütze  INTEGER REFERENCES Spieler (SID) ON UPDATE CASCADE ON DELETE CASCADE,
+    Assistent1  INTEGER REFERENCES Spieler (SID) ON UPDATE CASCADE ON DELETE CASCADE,
+    Assistent2  INTEGER REFERENCES Spieler (SID) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+-- Erstellung der Tabelle Strafe
+CREATE TABLE Strafe
+(
+    STID           SERIAL PRIMARY KEY,
+    SpielID        INTEGER REFERENCES Spielplan (SpielID) ON DELETE CASCADE,
+    Zeitstempel    TIMESTAMP    NOT NULL,
+    Dauer          INTEGER      NOT NULL,
+    Spieler        INTEGER REFERENCES Spieler (SID) ON UPDATE CASCADE ON DELETE CASCADE,
+    Schiedsrichter INTEGER REFERENCES Schiedsrichter (SRID) ON DELETE CASCADE,
+    Grund          VARCHAR(255) NOT NULL
+);
+
+
+-- Erweiterung der Studienfall
+-- Tabellen
+
+-- Erstellung der Tabelle Zuschauer
+CREATE TABLE Zuschauer
+(
+    ZID           SERIAL PRIMARY KEY,
+    Name          VARCHAR(255) NOT NULL,
+    Strasse       VARCHAR(255) NOT NULL,
+    Ort           VARCHAR(255) NOT NULL,
+    Plz           VARCHAR(255) NOT NULL,
+    Email         VARCHAR(255) NOT NULL,
+    Telefonnummer VARCHAR(255) NOT NULL
+);
+
+-- Erstellung der Tabelle Sitzplatz
+CREATE TABLE Sitzplatz
+(
+    SPID    INTEGER PRIMARY KEY,
+    Bereich VARCHAR(255) NOT NULL,
+    Reihe   INTEGER      NOT NULL,
+    Sitzklasse INTEGER NOT NULL
+        CHECK (Sitzklasse IN ('1', '2'))
+);
+
+-- Erstellung der Tabelle Ticket
+CREATE TABLE Ticket
+(
+    TID     SERIAL PRIMARY KEY,
+    SPID    SERIAL REFERENCES Sitzplatz (SPID),
+    Preis   MONEY        NOT NULL,
+    Datum   DATE         NOT NULL,
+    Uhr     TIME         NOT NULL,
+    Sitzart INTEGER NOT NULL REFERENCES Sitzplatz (SPID)
+);
+
+-- Erstellung der Tabelle Reservierung
+CREATE TABLE Reservierung
+(
+    RID SERIAL PRIMARY KEY,
+    ZID SERIAL REFERENCES Zuschauer (ZID) ON DELETE CASCADE,
+    TID SERIAL REFERENCES Ticket (TID) ON DELETE CASCADE
+);
+
+
+-- Inserts:
+-- Einfügen von Daten in die Tabelle Landesverband
+INSERT INTO Landesverband (Name, Strasse, Ort, Plz, Telefonnummer) VALUES ('Hessen', 'Teststrasse 1', 'Frankfurt', '60316', '+496912345678');
+INSERT INTO Landesverband (Name, Strasse, Ort, Plz, Telefonnummer) VALUES ('Bayern', 'Teststrasse 2', 'München', '80538', '+498155555555');
+INSERT INTO Landesverband (Name, Strasse, Ort, Plz, Telefonnummer) VALUES ('Bayern', 'Münchner Str. 1', 'München', '80331', '08912345678');
+INSERT INTO Landesverband (Name, Strasse, Ort, Plz, Telefonnummer) VALUES ('Baden-Württemberg', 'Stuttgarter Str. 2', 'Stuttgart', '70173', '071112345678');
+
+-- Einfügen von Daten in die Tabelle Verein
+INSERT INTO Verein (Name, Heimatstadt, Gründungsjahr, Geschäftsführer, Strasse, Ort, Plz, Landesverband) VALUES ('Eisbären Berlin', 'Berlin', 1965, 'Hans Schmidt', 'Teststrasse 3', 'Berlin', '10115', 1);
+INSERT INTO Verein (Name, Heimatstadt, Gründungsjahr, Geschäftsführer, Strasse, Ort, Plz, Landesverband) VALUES ('Adler Mannheim', 'Mannheim', 1983, 'Jürgen Bauer', 'Teststrasse 4', 'Mannheim', '68169', 1);
+INSERT INTO Verein (Name, Heimatstadt, Gründungsjahr, Geschäftsführer, Strasse, Ort, Plz, Landesverband) VALUES ('EHC Red Bull München', 'München', 1999, 'Markus Eichenberger', 'Münchner Str. 10', 'München', '80331', 1);
+INSERT INTO Verein (Name, Heimatstadt, Gründungsjahr, Geschäftsführer, Strasse, Ort, Plz, Landesverband) VALUES ('Adler Ludwigshafen', 'Mannheim', 1980, 'Karsten Mende', 'Mannheimer Str. 20', 'Ludwigshafen', '67059', 2);
+
+-- Einfügen von Daten in die Tabelle Spieler
+INSERT INTO Spieler (Vorname, Nachname, Vereinszugehörigkeit, Nationalität, Trikotnummer, Position) VALUES ('Max', 'Mustermann', 1, 'Deutschland', 17, 'Stürmer');
+INSERT INTO Spieler (Vorname, Nachname, Vereinszugehörigkeit, Nationalität, Trikotnummer, Position) VALUES ('Anna', 'Musterfrau', 2, 'Deutschland', 19, 'Verteidiger');
+INSERT INTO Spieler (Vorname, Nachname, Vereinszugehörigkeit, Nationalität, Trikotnummer, Position) VALUES ('Thomas', 'Müller', 1, 'Deutschland', 21, 'Stürmer');
+INSERT INTO Spieler (Vorname, Nachname, Vereinszugehörigkeit, Nationalität, Trikotnummer, Position) VALUES ('Manuel', 'Neuer', 2, 'Deutschland', 1, 'Tor');
+
+-- Einfügen von Daten in die Tabelle Schiedsrichter
+INSERT INTO Schiedsrichter (Vorname, Nachname, Nationalität, Erfahrung) VALUES ('Hans', 'Meier', 'Deutschland', 10);
+INSERT INTO Schiedsrichter (Vorname, Nachname, Nationalität, Erfahrung) VALUES ('Gisela', 'Müller', 'Deutschland', 5);
+INSERT INTO Schiedsrichter (Vorname, Nachname, Nationalität, Erfahrung) VALUES ('Hans', 'Meier', 'Deutschland', 10);
+INSERT INTO Schiedsrichter (Vorname, Nachname, Nationalität, Erfahrung) VALUES ('Maria', 'Schmidt', 'Österreich', 5);
+
+-- Einfügen von Daten in die Tabelle Saison
+INSERT INTO Saison (Jahr) VALUES (2022);
+INSERT INTO Saison (Jahr) VALUES (2021);
+
+
+-- Einfügen von Daten in die Tabelle Spielplan
+INSERT INTO Spielplan (SID, Datum, Uhrzeit, Heimmannschaft, Gastmannschaft) VALUES (1, '2022-01-01', '19:00:00', 1, 2);
+INSERT INTO Spielplan (SID, Datum, Uhrzeit, Heimmannschaft, Gastmannschaft) VALUES (2, '2021-12-31', '20:30:00', 2, 1);
+INSERT INTO Spielplan (SID, Datum, Uhrzeit, Heimmannschaft, Gastmannschaft) VALUES (1, '2022-02-01', '14:00:00', 1, 2);
+INSERT INTO Spielplan (SID, Datum, Uhrzeit, Heimmannschaft, Gastmannschaft) VALUES (2, '2021-11-30', '10:30:00', 2, 1);
+
+-- Einfügen von Daten in die Tabelle Spieleraufstellung
+INSERT INTO Spieleraufstellung (SpielID, SID, SRID) VALUES (1, 1, 1);
+INSERT INTO Spieleraufstellung (SpielID, SID, SRID) VALUES (2, 2, 2);
+INSERT INTO Spieleraufstellung (SpielID, SID, SRID) VALUES (1, 2, 1);
+INSERT INTO Spieleraufstellung (SpielID, SID, SRID) VALUES (2, 1, 2);
+
+-- Einfügen von Daten in die Tabelle Ergebnis
+INSERT INTO Ergebnis (SpielID, Endresultat, ToreHeim, ToreGast) VALUES (1, 'Reguläre Spielzeit', 5, 2);
+INSERT INTO Ergebnis (SpielID, Endresultat, ToreHeim, ToreGast) VALUES (2, 'Penalty-Schießen', 2, 2);
+INSERT INTO Ergebnis (SpielID, Endresultat, ToreHeim, ToreGast) VALUES (3, 'Reguläre Spielzeit', 5, 2);
+INSERT INTO Ergebnis (SpielID, Endresultat, ToreHeim, ToreGast) VALUES (4, 'Verlängerung', 4, 4);
+
+-- Einfügen von Daten in die Tabelle Tore
+INSERT INTO Tore (SpielID, Torschütze, Assistent1, Assistent2, Zeitstempel) VALUES (1, 1, 1, 2, '2022-01-01 19:00:00');
+INSERT INTO Tore (SpielID, Torschütze, Assistent1, Assistent2, Zeitstempel) VALUES (2, 2, 2, 1, '2021-12-31 20:30:00');
+INSERT INTO Tore (SpielID, Torschütze, Assistent1, Assistent2, Zeitstempel) VALUES (1, 3, 2, 1, '2022-01-01 19:15:00');
+INSERT INTO Tore (SpielID, Torschütze, Assistent1, Assistent2, Zeitstempel) VALUES (2, 1, NULL, NULL, '2021-12-31 20:45:00');
+
+-- Einfügen von Daten in die Tabelle Strafe
+INSERT INTO Strafe (SpielID, Zeitstempel, Dauer, Spieler, Schiedsrichter, Grund) VALUES (1, '2022-01-01 19:00:00', 2, 1, 1, 'Unnötige Härte');
+INSERT INTO Strafe (SpielID, Zeitstempel, Dauer, Spieler, Schiedsrichter, Grund) VALUES (2, '2021-12-31 20:30:00', 5, 2, 2, 'Beleidigung');
+INSERT INTO Strafe (SpielID, Zeitstempel, Dauer, Spieler, Schiedsrichter, Grund) VALUES (1, '2022-01-01 19:20:00', 2, 4, 1, 'Unsportliches Verhalten');
+INSERT INTO Strafe (SpielID, Zeitstempel, Dauer, Spieler, Schiedsrichter, Grund) VALUES (2, '2021-12-31 21:00:00', 10, 3, 2, 'Schlägerei');
+
+
+
+-- SQL Abfragen:
+
+-- 1) Aktuelle Tabelle:
+SELECT Verein.Name,
+       SUM(Ergebnis.ToreHeim - Ergebnis.ToreGast) AS Tordifferenz,
+       SUM(CASE
+               WHEN Ergebnis.Endresultat = 'Reguläre Spielzeit' THEN 3
+               WHEN Ergebnis.Endresultat = 'Verlängerung' THEN 2
+               ELSE 1 END)                        AS Punkte
+FROM Verein
+         INNER JOIN Ergebnis ON Ergebnis.toreheim = Verein.VID OR Ergebnis.toregast = Verein.VID
+GROUP BY Verein.Name
+ORDER BY Punkte DESC;
+
+-- 2) Mannschaft mit meisten Gegentoren pro Spiel
+WITH GegentoreProSpiel AS (
+    SELECT Verein.Name, SUM(Ergebnis.ToreGast) / COUNT(Ergebnis.SpielID) AS GegentoreProSpiel
+    FROM Verein
+             INNER JOIN Ergebnis ON Ergebnis.toreheim = Verein.VID
+    GROUP BY Verein.Name
+)
+SELECT Name, GegentoreProSpiel FROM GegentoreProSpiel
+ORDER BY GegentoreProSpiel DESC
+LIMIT 1;
+
+-- 3) Spiel mit den meisten Strafen:
+SELECT Spielplan.SpielID, COUNT(Strafe.Dauer) as AnzahlStrafen
+FROM Spielplan
+         LEFT JOIN Strafe ON Strafe.SpielID = Spielplan.SpielID
+GROUP BY Spielplan.SpielID
+ORDER BY AnzahlStrafen DESC
+LIMIT 1;
+
+-- 4) Spieler mit den meisten Strafen wegen "Unnötiger Härte":
+SELECT Spieler.Vorname, Spieler.Nachname, COUNT(Strafe.STID) as AnzahlStrafen
+FROM Spieler
+         LEFT JOIN Strafe ON Strafe.Spieler = Spieler.SID
+WHERE Strafe.Grund = 'Unnötige Härte'
+GROUP BY Spieler.SID
+ORDER BY AnzahlStrafen DESC
+LIMIT 1;
+
+-- 5) Anzahl der Tore pro Spieler:
+SELECT Spieler.Vorname, Spieler.Nachname, COUNT(Tore.TID) as AnzahlTore
+FROM Spieler
+         LEFT JOIN Tore ON Tore.torschütze = Spieler.SID
+GROUP BY Spieler.SID
+ORDER BY AnzahlTore DESC;
+
+-- 6) Anzahl der Strafen pro Schiedsrichter:
+SELECT Schiedsrichter.Vorname, Schiedsrichter.Nachname, COUNT(Strafe.schiedsrichter) as AnzahlStrafen
+FROM Schiedsrichter
+         LEFT JOIN Strafe ON Strafe.schiedsrichter = Schiedsrichter.SRID
+GROUP BY Schiedsrichter.SRID
+ORDER BY AnzahlStrafen DESC;
+
+-- 7) Anzahl der Spiele pro Schiedsrichter:
+SELECT Schiedsrichter.Vorname, Schiedsrichter.Nachname, COUNT(Spieleraufstellung.SpielID) as AnzahlSpiele
+FROM Schiedsrichter
+         LEFT JOIN Spieleraufstellung ON Spieleraufstellung.SRID = Schiedsrichter.SRID
+GROUP BY Schiedsrichter.SRID
+ORDER BY AnzahlSpiele DESC;
+
+-- 8) Anzahl der Strafen pro Saison:
+SELECT Saison.Jahr, COUNT(Strafe.schiedsrichter) as AnzahlStrafen
+FROM Saison
+         LEFT JOIN Spielplan ON Spielplan.SID = Saison.SID
+         LEFT JOIN Strafe ON Strafe.SpielID = Spielplan.SpielID
+GROUP BY Saison.SID
+ORDER BY AnzahlStrafen DESC;
+
+
+-- Trigger:
+-- 1) Innerhalb der Funktion wird überprüft, ob die Summe der ToreHeim und ToreGast in den neuen Daten (NEW) mit der Summe in den alten Daten (OLD) übereinstimmt.
+-- Wenn die Summen nicht übereinstimmen, wird eine Ausnahme ausgelöst und die Operation wird abgebrochen.
+CREATE OR REPLACE FUNCTION check_tore_sum() RETURNS TRIGGER AS $$
+BEGIN
+    IF (NEW.toreheim + NEW.toregast) != (OLD.toreheim + OLD.toregast) THEN
+        RAISE EXCEPTION 'ToreHeim und ToreGast müssen gleich sein';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_tore_sum_trigger
+    AFTER INSERT OR UPDATE ON ergebnis
+    FOR EACH ROW
+EXECUTE FUNCTION check_tore_sum();
+
+-- 2) Prüfung ob Heim- und Gastmannschaft vorhanden sind, bevor ein Spiel geplant wird:
+CREATE OR REPLACE FUNCTION check_valid_teams()
+    RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM Verein WHERE Verein.VID = NEW.Heimmannschaft) OR NOT EXISTS (SELECT 1 FROM Verein WHERE Verein.VID = NEW.Gastmannschaft) THEN
+        RAISE EXCEPTION 'Heim- oder Gastmannschaft existiert nicht.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_valid_teams
+    BEFORE INSERT ON Spielplan
+    FOR EACH ROW
+EXECUTE FUNCTION check_valid_teams();
