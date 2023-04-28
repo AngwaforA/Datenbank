@@ -32,7 +32,6 @@ create Table unternehmen(
 );
 --Welche Bewerber haben eine Zusage erhalten und bei welchen Unternehmen haben sie sich beworben?
 
-
 --Inserts filiale
 insert into filiale(f_name,mitarbeiterzahl) values ('Hamburg', 39),
 													('Frankfurt', 50),
@@ -69,9 +68,80 @@ insert into unternehmen(u_id,u_name,freieposition,bereich) values (115, 'Bosch',
 select * from unternehmen;														
 
 
+--Abfragen
+--Adding new element
+insert into filiale(f_name,mitarbeiterzahl) values ('Berlin Mitte', 25);
+select * from filiale;
 
+--Aktualisieren Sie das Gehalt des Mitarbeiters mit der ID 123 auf 55000€.
+update mitarbeter 
+set gehalt = 55000
+where mit_id = 1234;
+select * from mitarbeter;
 
+--Zeigen Sie den Namen und die Anzahl der freien Positionen für jedes Unternehmen an,
+--bei dem es mindestens 5 freie Positionen gibt.
+select u_name, freieposition
+from unternehmen
+where unternehmen.freieposition >= 5;
 
+--Fügen Sie eine neue Spalte namens "telefonnummer" zur Tabelle "filiale" hinzu.
+alter table filiale add column telefonnummer integer;
 
+--Wie viele Mitarbeiter hat jede Filiale insgesamt?
+select f_name, sum(mitarbeiterzahl) as totMitarbeiter
+from filiale join mitarbeter on filiale.f_id = mitarbeter.standort
+group by f_name;
 
+--Wie viele Mitarbeiter die Filiale, die mit B anfangen insgesamt?
+select f_name, sum(mitarbeiterzahl) as totMitarbeiter
+from filiale
+where f_name like 'B%'
+group by f_name;
 
+--Was ist das durchschnittliche Gehalt aller Mitarbeiter in der Abteilung "Finanzen"?
+select abteilung, AVG(gehalt) as durchschnitt
+from mitarbeter 
+where abteilung = 'Finanz';
+
+--Was ist das höchste Gehalt aller Mitarbeiter in der gesamten Firma?
+select max(gehalt)
+from mitarbeter
+
+select mit_name, gehalt
+from mitarbeter
+order by gehalt desc
+limit 1 ;
+
+--Was ist das Minimum und Maximum der Anzahl freier Positionen pro Bereich?
+select bereich,max(freieposition) as maxi, min(freieposition) as mini
+from unternehmen 
+group by bereich;
+
+--Wie viele Bewerber haben eine Zusage erhalten und wie viele nicht?
+select zusage,count(*) as behalten
+from bewerber
+group by zusage;
+
+--Welche Bewerber haben eine Zusage erhalten und für welche Positionen?
+select b_id, bewerberposition
+from bewerber
+where zusage = true
+group by bewerberposition;
+
+--Zeigen Sie den Namen, die Abteilung und das Gehalt aller Mitarbeiter an, die in
+--einem Unternehmen arbeiten, dessen Name mit "A" beginnt.
+select f_name, abteilung, gehalt, mit_name
+from filiale f join mitarbeter mi on f.f_if = mi.standort
+where f_name like 'A%' ;
+
+--Wie viele Bewerber haben sich für jede Position beworben?
+select bewerberposition, count(*) as anzahl
+from bewerber
+group by bewerberposition;
+
+--Welche Mitarbeiter verdienen mehr als ihr Abteilungsdurchschnitt?
+select mit_name, gehalt
+from mitarbeter
+having gehalt > avg(gehalt)
+group by mit_name;
